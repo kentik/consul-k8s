@@ -18,3 +18,11 @@ func serviceID(name, addr string) string {
 	sum := sha1.Sum([]byte(fmt.Sprintf("%s-%s", name, addr)))
 	return fmt.Sprintf("%s-%s", name, hex.EncodeToString(sum[:])[:12])
 }
+
+// serviceInstanceID generates a unique ID for a service instance registered
+// from an endpoint. Unlike serviceID it includes the port, so several K8S
+// services that sync to the same Consul service name with different ports
+// don't overwrite each other's instances for the same address.
+func serviceInstanceID(name, addr string, port int) string {
+	return serviceID(name, fmt.Sprintf("%s:%d", addr, port))
+}

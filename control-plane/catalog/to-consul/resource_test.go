@@ -1379,6 +1379,55 @@ func TestServiceResource_clusterIPAnnotatedPortName(t *testing.T) {
 	})
 }
 
+// Test that ClusterIP services sharing an annotated Consul service name but
+// exposing different ports get distinct instance IDs for the same address.
+func TestServiceResource_clusterIPSameNameDifferentPorts(t *testing.T) {
+	t.Parallel()
+	client := fake.NewSimpleClientset()
+	syncer := newTestSyncer()
+	serviceResource := defaultServiceResource(client, syncer)
+	serviceResource.ClusterIPSync = true
+
+	// Start the controller
+	closer := controller.TestControllerRun(&serviceResource)
+	defer closer()
+
+	// Insert one service per port, both synced as "foo"
+	for name, port := range map[string]string{"foo-http": "http", "foo-rpc": "rpc"} {
+		svc := clusterIPService(name, metav1.NamespaceDefault)
+		svc.Annotations[annotationServiceName] = "foo"
+		svc.Annotations[annotationServicePort] = port
+		_, err := client.CoreV1().Services(metav1.NamespaceDefault).Create(context.Background(), svc, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	createNodes(t, client)
+
+	// Insert the endpoint slices, backed by the same addresses
+	createEndpointSlice(t, client, "foo-http", metav1.NamespaceDefault)
+	createEndpointSlice(t, client, "foo-rpc", metav1.NamespaceDefault)
+
+	// Verify what we got
+	retry.Run(t, func(r *retry.R) {
+		syncer.Lock()
+		defer syncer.Unlock()
+		actual := syncer.Registrations
+		require.Len(r, actual, 6)
+		ids := map[string]struct{}{}
+		ports := map[string][]int{}
+		for _, reg := range actual {
+			require.Equal(r, "foo", reg.Service.Service)
+			require.Equal(r, reg.Service.ID, reg.Check.ServiceID)
+			ids[reg.Service.ID] = struct{}{}
+			ports[reg.Service.Address] = append(ports[reg.Service.Address], reg.Service.Port)
+		}
+		require.Len(r, ids, 6)
+		for _, addr := range []string{"1.1.1.1", "2.2.2.2", "3.3.3.3"} {
+			require.ElementsMatch(r, []int{8080, 2000}, ports[addr])
+		}
+	})
+}
+
 // Test that the proper registrations are generated for a ClusterIP type with
 // annotated port number override.
 func TestServiceResource_clusterIPAnnotatedPortNumber(t *testing.T) {

@@ -775,16 +775,16 @@ func (t *ServiceResource) registerServiceInstance(
 				r := baseNode
 				rs := baseService
 				r.Service = &rs
-				r.Service.ID = serviceID(r.Service.Service, addr)
+				r.Service.ID = serviceInstanceID(r.Service.Service, addr, epPort)
 				r.Service.Address = addr
 				r.Service.Port = epPort
 				r.Service.Meta = updateServiceMeta(baseService.Meta, endpoint)
 				r.Check = &consulapi.AgentCheck{
-					CheckID:   consulHealthCheckID(endpointSlice.Namespace, serviceID(r.Service.Service, addr)),
+					CheckID:   consulHealthCheckID(endpointSlice.Namespace, r.Service.ID),
 					Name:      consulKubernetesCheckName,
 					Namespace: baseService.Namespace,
 					Type:      consulKubernetesCheckType,
-					ServiceID: serviceID(r.Service.Service, addr),
+					ServiceID: r.Service.ID,
 				}
 
 				// Consider endpoint health state for registered consul service
