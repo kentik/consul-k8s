@@ -33,7 +33,7 @@ six==1.16.0
 # GHSA-gjv8-xp57-g29c (polynomial-time ReDoS in IDENTIFIER/VALUE selector
 # sub-patterns), and GHSA-j934-xhv5-fg8f (polynomial-time ReDoS in RE_WS_END
 # whitespace/comment trimming regex).
-soupsieve==2.10
+soupsieve==4.0
 # tornado 6.5.9 fixes CVE-2026-103262: unbounded memory accumulation in
 # CurlAsyncHTTPClient decompression bomb via gzip-encoded responses.
 # Also fixes GHSA-mgf9-4vpg-hj56 (CVE-2026-49855) gzip-bomb,
